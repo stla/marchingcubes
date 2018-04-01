@@ -2,6 +2,8 @@ module Lib
   where
 import           CTypes
 -- import           Foreign
+import           Control.Monad.Extra   (concatMapM)
+import           Data.List.Index       (indexed)
 import           Foreign.C.Types
 import           Foreign.Marshal.Alloc (free, malloc, mallocBytes)
 import           Foreign.Marshal.Array (peekArray, pokeArray)
@@ -40,16 +42,16 @@ polygoniseTri gridcell iso i0 i1 i2 i3 = do
 toGridCell :: [XYZ] -> [Double] -> GridCell
 toGridCell xyzs vals = GridCell { _p = xyzs, _val = vals }
 
-polygoniseTri' :: GridCell
-               -> Double
+polygoniseTri' :: Double
+               -> GridCell
                -> IO [Triangle]
-polygoniseTri' gridcell iso = do
-  triangles1 <- polygoniseTri gridcell iso 0 2 3 7
-  triangles2 <- polygoniseTri gridcell iso 0 2 6 7
-  triangles3 <- polygoniseTri gridcell iso 0 4 6 7
-  triangles4 <- polygoniseTri gridcell iso 0 6 1 2
-  triangles5 <- polygoniseTri gridcell iso 0 6 1 4
-  triangles6 <- polygoniseTri gridcell iso 5 6 1 4
+polygoniseTri' iso gridcell = do
+  triangles1 <- polygoniseTri gridcell iso 0 3 2 6
+  triangles2 <- polygoniseTri gridcell iso 0 3 7 6
+  triangles3 <- polygoniseTri gridcell iso 0 4 7 6
+  triangles4 <- polygoniseTri gridcell iso 0 7 1 3
+  triangles5 <- polygoniseTri gridcell iso 0 7 1 4
+  triangles6 <- polygoniseTri gridcell iso 5 7 1 4
   return $ triangles1 ++ triangles2 ++ triangles3 ++ triangles4 ++ triangles5 ++ triangles6
 
 atest :: IO [Triangle]
@@ -65,15 +67,64 @@ atest = do
                , (0, 1, 1) ]
         vals = map f [1, 2, 3, 4, 5, 6, 7, 8]
         gridcell = toGridCell xyzs vals
-    polygoniseTri' gridcell 4
+    polygoniseTri' 4 gridcell
 
-cube1 :: [XYZ]
+{- cube1 :: [XYZ]
 cube1 = [(toDbl i, toDbl j, toDbl k) | i <- [0,1], j <- [0,1], k <- [0,1]]
-    where
-        toDbl :: Int -> Double
-        toDbl = realToFrac
+  where
+    toDbl :: Int -> Double
+    toDbl = realToFrac -}
 
-shift_x,shift_y,shift_z :: Double -> XYZ -> XYZ
+cube :: (Int,Int,Int) -> [XYZ]
+cube (i,j,k) = [(dbl a, dbl b, dbl c) | a <- [i,i+1], b <- [j,j+1], c <- [k,k+1]]
+  where
+    dbl :: Int -> Double
+    dbl = realToFrac
+
+{- shift_x,shift_y,shift_z :: Double -> XYZ -> XYZ
 shift_x s (x,y,z) = (x+s,y,z)
 shift_y s (x,y,z) = (x,y+s,z)
-shift_z s (x,y,z) = (x,y,z+s)
+shift_z s (x,y,z) = (x,y,z+s) -}
+
+fsphere :: XYZ -> Double
+fsphere (x,y,z) = x*x + y*y + z*z
+
+range_x,range_y,range_z :: [Double]
+range_x = [2 * frac i n - 1| i <- [0 .. n]]
+  where
+    n = 4
+    frac :: Int -> Int -> Double
+    frac p q = realToFrac p / realToFrac q
+range_y = range_x
+range_z = range_x
+
+-- voxelGrid :: [(Int, XYZ)]
+-- voxelGrid = indexed [(x,y,z) | x <- range_x, y <- range_y, z <- range_z]
+
+-- baseGrid :: [(Int, XYZ)]
+-- baseGrid = indexed [(toDbl i, toDbl j, toDbl k) | i <- [0 .. n], j <- [0 .. n], k <- [0 .. n]]
+--   where
+--       n = 4
+--       toDbl :: Int -> Double
+--       toDbl = realToFrac
+
+baseGrid :: [[XYZ]]
+baseGrid = map cube [(i, j, k) | i <- [0 .. n], j <- [0 .. n], k <- [0 .. n]]
+  where
+    n = 4
+
+scaleCube :: [XYZ] -> [XYZ]
+scaleCube xyzs = map scale xyzs
+  where
+  scale (x, y, z) = (s x, s y, s z)
+    where
+    s u = 2*u/5-1
+
+voxelGrid :: [[XYZ]]
+voxelGrid = map scaleCube baseGrid
+
+gridcells :: [GridCell]
+gridcells = map (\vcube -> toGridCell vcube (map fsphere vcube)) voxelGrid
+
+triangles_sphere :: IO [Triangle]
+triangles_sphere = concatMapM (polygoniseTri' 1) gridcells
