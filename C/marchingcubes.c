@@ -2,18 +2,6 @@
 #include <math.h>
 #include "marchingcubes.h"
 
-TRIANGLE* testTriangle(double a, double b, double c){
-  XYZ xyz;
-  xyz.x = a;
-  xyz.y = b;
-  xyz.z = c;
-  TRIANGLE *tri = malloc(sizeof(TRIANGLE));
-  tri[0].p[0] = xyz;
-  tri[0].p[1] = xyz;
-  tri[0].p[2] = xyz;
-  return tri;
-}
-
 /*
    Linearly interpolate the position where an isosurface cuts
    an edge between two vertices, each with their own scalar value
@@ -480,6 +468,15 @@ int Polygonise(GRIDCELL* g, double isolevel, TRIANGLE *triangles)
    if (grid.val[6] < isolevel) cubeindex |= 32;
    if (grid.val[7] < isolevel) cubeindex |= 64;
    if (grid.val[3] < isolevel) cubeindex |= 128;
+
+   /* import Data.Bits 
+   h :: Double -- isolevel
+   gridVal :: [Double]
+   summands :: [Integer]
+   summands = [1, 8, 16, 128, 2, 4, 32, 64]
+   f :: Int -> Integer -> Integer
+   f i sum = if gridVal!!i < h then sum .|. summand!!i else sum
+   foldr f 0 [0 .. 7]  */
 
    /* Cube is entirely in/out of the surface */
    if (edgeTable[cubeindex] == 0)
