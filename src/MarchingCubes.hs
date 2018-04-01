@@ -149,3 +149,13 @@ triangles_Heart = concatMapM (polygoniseTri' 0) gridcells_Heart
 
 triangles_Heart' :: IO [Triangle]
 triangles_Heart' = concatMapM (polygonise 0) gridcells_Heart
+
+-- ~~ MAIN FUNCTION ~~ --
+marchingCubes :: (XYZ -> Double)   -- function
+              -> Double            -- isolevel
+              -> Double -> Double  -- bounds (common to x,y,z)
+              -> Int               -- grid subdivisions
+              -> IO [Triangle]
+marchingCubes f level a b n = concatMapM (polygonise level) gridcells
+  where
+  gridcells = map (\vcube -> toGridCell vcube (map f vcube)) (voxelGrid n a b)
