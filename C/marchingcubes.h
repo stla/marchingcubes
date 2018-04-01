@@ -2,13 +2,13 @@
 
 typedef struct {
    double x,y,z;
-} XYZ;
+} XYZ_T;
 
 typedef struct {
-   XYZ p[3];
-} TRIANGLE;
+   XYZ_T p[3];
+} Triangle_T;
 
 typedef struct {
-   XYZ p[8];
+   XYZ_T p[8];
    double val[8];
-} GRIDCELL;
+} GridCell_T;

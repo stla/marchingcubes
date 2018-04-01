@@ -1,5 +1,13 @@
 {-# LANGUAGE ForeignFunctionInterface #-}
 module CTypes 
+  (  XYZ 
+   , Triangle
+   , GridCell (..)
+   , CGridCell
+   , c_Polygonise
+   , c_PolygoniseTri
+   , gridCellToCGridCell
+   , cTriangleToTriangle )
   where
 import           Foreign
 import           Foreign.C.Types
@@ -13,20 +21,20 @@ data CXYZ = CXYZ {
 } deriving Show
 
 instance Storable CXYZ where
-    sizeOf    __ = #{size XYZ}
-    alignment __ = #{alignment XYZ}
+    sizeOf    __ = #{size XYZ_T}
+    alignment __ = #{alignment XYZ_T}
     peek ptr = do
-      x' <- #{peek XYZ, x} ptr
-      y' <- #{peek XYZ, y} ptr
-      z' <- #{peek XYZ, z} ptr
+      x' <- #{peek XYZ_T, x} ptr
+      y' <- #{peek XYZ_T, y} ptr
+      z' <- #{peek XYZ_T, z} ptr
       return CXYZ { __x = x'
                   , __y = y'
                   , __z = z' }
     poke ptr (CXYZ r1 r2 r3)
       = do
-          #{poke XYZ, x} ptr r1
-          #{poke XYZ, y} ptr r2
-          #{poke XYZ, z} ptr r3
+          #{poke XYZ_T, x} ptr r1
+          #{poke XYZ_T, y} ptr r2
+          #{poke XYZ_T, z} ptr r3
 
 type XYZ = (Double, Double, Double)
 
@@ -34,58 +42,58 @@ cXYZtoXYZ :: CXYZ -> XYZ
 cXYZtoXYZ (CXYZ x y z) = (realToFrac x, realToFrac y, realToFrac z)
 
 
-data CTRIANGLE = CTRIANGLE {
+data CTriangle = CTriangle {
   __p :: [CXYZ]
 } deriving Show
 
 type Triangle = (XYZ, XYZ, XYZ)
 
-cTriangleToTriangle :: CTRIANGLE -> Triangle
-cTriangleToTriangle (CTRIANGLE cxyzs) = (xyz0, xyz1, xyz2)
+cTriangleToTriangle :: CTriangle -> Triangle
+cTriangleToTriangle (CTriangle cxyzs) = (xyz0, xyz1, xyz2)
   where 
   xyzs = map cXYZtoXYZ cxyzs
   xyz0 = xyzs !! 0 
   xyz1 = xyzs !! 1
   xyz2 = xyzs !! 2 
 
-instance Storable CTRIANGLE where
-  sizeOf    __ = #{size TRIANGLE}
-  alignment __ = #{alignment TRIANGLE}
+instance Storable CTriangle where
+  sizeOf    __ = #{size Triangle_T}
+  alignment __ = #{alignment Triangle_T}
   peek ptr = do
-    p' <- peekArray 3 $ #{ptr TRIANGLE, p} ptr
-    return CTRIANGLE { __p = p' }
-  poke ptr (CTRIANGLE r1) = do
-    pokeArray (#{ptr TRIANGLE, p} ptr) r1
+    p' <- peekArray 3 $ #{ptr Triangle_T, p} ptr
+    return CTriangle { __p = p' }
+  poke ptr (CTriangle r1) = do
+    pokeArray (#{ptr Triangle_T, p} ptr) r1
 
-foreign import ccall unsafe "testTriangle" c_testTriangle
-  :: CDouble -> CDouble -> CDouble 
-  -> IO (Ptr CTRIANGLE)
+-- foreign import ccall unsafe "testTriangle" c_testTriangle
+--  :: CDouble -> CDouble -> CDouble 
+--  -> IO (Ptr CTriangle)
 
 
-data CGRIDCELL = CGRIDCELL {
+data CGridCell = CGridCell {
     ___p  :: [CXYZ]
   , __val :: [CDouble]
 } deriving Show
 
-instance Storable CGRIDCELL where
-  sizeOf    __ = #{size GRIDCELL}
-  alignment __ = #{alignment GRIDCELL}
+instance Storable CGridCell where
+  sizeOf    __ = #{size GridCell_T}
+  alignment __ = #{alignment GridCell_T}
   peek ptr = do
-    p'   <- peekArray 8 $ #{ptr GRIDCELL, p} ptr
-    val' <- peekArray 8 $ #{ptr GRIDCELL, val} ptr
-    return CGRIDCELL { ___p  = p'
+    p'   <- peekArray 8 $ #{ptr GridCell_T, p} ptr
+    val' <- peekArray 8 $ #{ptr GridCell_T, val} ptr
+    return CGridCell { ___p  = p'
                      , __val = val' }
-  poke ptr (CGRIDCELL r1 r2) = do
-    pokeArray (#{ptr GRIDCELL, p} ptr) r1
-    pokeArray (#{ptr GRIDCELL, val} ptr) r2
+  poke ptr (CGridCell r1 r2) = do
+    pokeArray (#{ptr GridCell_T, p} ptr) r1
+    pokeArray (#{ptr GridCell_T, val} ptr) r2
 
 foreign import ccall unsafe "PolygoniseTri" c_PolygoniseTri
-  :: Ptr CGRIDCELL -> CDouble -> Ptr CTRIANGLE
+  :: Ptr CGridCell -> CDouble -> Ptr CTriangle
   -> CInt -> CInt -> CInt -> CInt 
   -> IO CInt
 
 foreign import ccall unsafe "Polygonise" c_Polygonise
-  :: Ptr CGRIDCELL -> CDouble -> Ptr CTRIANGLE
+  :: Ptr CGridCell -> CDouble -> Ptr CTriangle
   -> IO CInt
 
 data GridCell = GridCell {
@@ -93,13 +101,13 @@ data GridCell = GridCell {
   , _val :: [Double]
 } deriving Show
 
-cGridCellToGridCell :: CGRIDCELL -> GridCell
-cGridCellToGridCell (CGRIDCELL cxyzs cvals) = 
-  GridCell { _p = map cXYZtoXYZ cxyzs, _val = map realToFrac cvals}
+-- cGridCellToGridCell :: CGridCell -> GridCell
+-- cGridCellToGridCell (CGridCell cxyzs cvals) =
+--  GridCell { _p = map cXYZtoXYZ cxyzs, _val = map realToFrac cvals}
 
-gridCellToCGridCell :: GridCell -> CGRIDCELL
+gridCellToCGridCell :: GridCell -> CGridCell
 gridCellToCGridCell (GridCell xyzs vals) = 
-  CGRIDCELL {  ___p  = map hXYZtoCXYZ xyzs
+  CGridCell {  ___p  = map hXYZtoCXYZ xyzs
              , __val = map realToFrac vals}
   where 
     hXYZtoCXYZ (x,y,z) = CXYZ {  __x = realToFrac x

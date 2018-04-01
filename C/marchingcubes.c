@@ -6,13 +6,13 @@
    Linearly interpolate the position where an isosurface cuts
    an edge between two vertices, each with their own scalar value
 */
-XYZ VertexInterp(isolevel, p1, p2, valp1, valp2)
+XYZ_T VertexInterp(isolevel, p1, p2, valp1, valp2)
 double isolevel;
-XYZ p1,p2;
+XYZ_T p1,p2;
 double valp1,valp2;
 {
    double mu;
-   XYZ p;
+   XYZ_T p;
 
    if (fabs(isolevel-valp1) < 0.00001)
       return(p1);
@@ -60,12 +60,12 @@ double valp1,valp2;
       PolygoniseTri(grid,iso,triangles,0,6,1,4);
       PolygoniseTri(grid,iso,triangles,5,6,1,4);
 */
-int PolygoniseTri(GRIDCELL* gptr, double iso, 
-   TRIANGLE *tri, int v0, int v1, int v2, int v3)
+int PolygoniseTri(GridCell_T* gptr, double iso, 
+   Triangle_T *tri, int v0, int v1, int v2, int v3)
 {
    int ntri = 0;
    int triindex;
-   GRIDCELL g = *gptr;
+   GridCell_T g = *gptr;
 
    /*
       Determine which of the 16 cases we have given which vertices
@@ -157,12 +157,12 @@ int PolygoniseTri(GRIDCELL* gptr, double iso,
 	0 will be returned if the grid cell is either totally above
    of totally below the isolevel.
 */
-int Polygonise(GRIDCELL* g, double isolevel, TRIANGLE *triangles)
+int Polygonise(GridCell_T* g, double isolevel, Triangle_T *triangles)
 {
    int i,ntriang;
    int cubeindex;
-   XYZ vertlist[12];
-   GRIDCELL grid = *g;
+   XYZ_T vertlist[12];
+   GridCell_T grid = *g;
 
   int edgeTable[256]={
   0x0  , 0x109, 0x203, 0x30a, 0x406, 0x50f, 0x605, 0x70c,

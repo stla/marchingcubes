@@ -14,7 +14,7 @@ polygoniseTri :: GridCell
               -> IO [Triangle]
 polygoniseTri gridcell iso i0 i1 i2 i3 = do
     let cgridcell = gridCellToCGridCell gridcell
-    cgridcellPtr <- mallocBytes (sizeOf (undefined :: CGRIDCELL))
+    cgridcellPtr <- mallocBytes (sizeOf (undefined :: CGridCell))
     poke cgridcellPtr cgridcell
     ctrianglesPtr <- malloc
     ntri <- c_PolygoniseTri cgridcellPtr (realToFrac iso) ctrianglesPtr
@@ -50,7 +50,7 @@ polygonise :: Double
            -> IO [Triangle]
 polygonise iso gridcell = do
     let cgridcell = gridCellToCGridCell gridcell
-    cgridcellPtr <- mallocBytes (sizeOf (undefined :: CGRIDCELL))
+    cgridcellPtr <- mallocBytes (sizeOf (undefined :: CGridCell))
     poke cgridcellPtr cgridcell
     ctrianglesPtr <- malloc
     ntri <- c_Polygonise cgridcellPtr (realToFrac iso) ctrianglesPtr
