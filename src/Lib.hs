@@ -30,14 +30,19 @@ polygoniseTri gridcell iso i0 i1 i2 i3 = do
     free ctrianglesPtr
     return triangles
 
--- :: Ptr CGRIDCELL :: grille avec les valeurs
--- -> CDouble : isolevel
--- -> Ptr CTRIANGLE : "vide", c'est une sortie
--- -> CInt -> CInt -> CInt -> CInt : les 4 indices, voir le fichier C
--- -> IO CInt : le nombre de triangles calculés
-
--- GridCell = { _p :: 8 XYZ, _val: 8 double }
--- XYZ = (Double, Double, Double)
+polygonise :: Double
+           -> GridCell
+           -> IO [Triangle]
+polygonise iso gridcell = do
+    let cgridcell = gridCellToCGridCell gridcell
+    cgridcellPtr <- mallocBytes (sizeOf (undefined :: CGRIDCELL))
+    poke cgridcellPtr cgridcell
+    ctrianglesPtr <- malloc
+    ntri <- c_Polygonise cgridcellPtr (realToFrac iso) ctrianglesPtr
+    ctriangles <- peekArray (fromIntegral ntri) ctrianglesPtr
+    let triangles = map cTriangleToTriangle ctriangles
+    free ctrianglesPtr
+    return triangles
 
 toGridCell :: [XYZ] -> [Double] -> GridCell
 toGridCell xyzs vals = GridCell { _p = xyzs, _val = vals }
@@ -46,12 +51,18 @@ polygoniseTri' :: Double
                -> GridCell
                -> IO [Triangle]
 polygoniseTri' iso gridcell = do
-  triangles1 <- polygoniseTri gridcell iso 0 3 2 6
+{-  triangles1 <- polygoniseTri gridcell iso 0 3 2 6
   triangles2 <- polygoniseTri gridcell iso 0 3 7 6
   triangles3 <- polygoniseTri gridcell iso 0 4 7 6
   triangles4 <- polygoniseTri gridcell iso 0 7 1 3
   triangles5 <- polygoniseTri gridcell iso 0 7 1 4
-  triangles6 <- polygoniseTri gridcell iso 5 7 1 4
+  triangles6 <- polygoniseTri gridcell iso 5 7 1 4 -}
+  triangles1 <- polygoniseTri gridcell iso 0 5 1 3
+  triangles2 <- polygoniseTri gridcell iso 0 5 7 3
+  triangles3 <- polygoniseTri gridcell iso 0 2 7 3
+  triangles4 <- polygoniseTri gridcell iso 0 7 4 5
+  triangles5 <- polygoniseTri gridcell iso 0 7 4 2
+  triangles6 <- polygoniseTri gridcell iso 6 7 4 2
   return $ triangles1 ++ triangles2 ++ triangles3 ++ triangles4 ++ triangles5 ++ triangles6
 
 atest :: IO [Triangle]
@@ -114,38 +125,39 @@ range_z = range_x -}
 --       toDbl :: Int -> Double
 --       toDbl = realToFrac
 
-baseGrid :: [[XYZ]]
-baseGrid = map cube [(i, j, k) | i <- [0 .. n], j <- [0 .. n], k <- [0 .. n]]
-  where
-    n = 9
+baseGrid :: Int -> [[XYZ]]
+baseGrid n = map cube [(i, j, k) | i <- [0 .. n], j <- [0 .. n], k <- [0 .. n]]
 
-scaleCube :: Double -> Double -> [XYZ] -> [XYZ]
-scaleCube a b = map scale
+scaleCube :: Int -> Double -> Double -> [XYZ] -> [XYZ]
+scaleCube n a b = map scale
   where
   scale (x, y, z) = (s x, s y, s z)
     where
-    s u = (b-a)*u/10 + a
+    s u = a + (b-a)*u / realToFrac (n+1)
 
-voxelGrid :: Double -> Double -> [[XYZ]]
-voxelGrid a b = map (scaleCube a b) baseGrid
+voxelGrid :: Int -> Double -> Double -> [[XYZ]]
+voxelGrid n a b = map (scaleCube n a b) (baseGrid n)
 
 gridcells_sphere :: [GridCell]
 gridcells_sphere = map (\vcube -> toGridCell vcube (map fsphere vcube))
-                       (voxelGrid (-1) 1)
+                       (voxelGrid 5 (-1) 1)
 
 triangles_sphere :: IO [Triangle]
 triangles_sphere = concatMapM (polygoniseTri' 1) gridcells_sphere
 
 gridcells_Goursat :: [GridCell]
 gridcells_Goursat = map (\vcube -> toGridCell vcube (map fGoursat vcube))
-                        (voxelGrid (-2) 2)
+                        (voxelGrid 10 (-2) 2)
 
 triangles_Goursat :: IO [Triangle]
 triangles_Goursat = concatMapM (polygoniseTri' 2) gridcells_Goursat
 
 gridcells_Heart :: [GridCell]
 gridcells_Heart = map (\vcube -> toGridCell vcube (map fHeart vcube))
-                        (voxelGrid (-4) 4)
+                        (voxelGrid 50 (-4) 4)
 
 triangles_Heart :: IO [Triangle]
 triangles_Heart = concatMapM (polygoniseTri' 0) gridcells_Heart
+
+triangles_Heart' :: IO [Triangle]
+triangles_Heart' = concatMapM (polygonise 0) gridcells_Heart

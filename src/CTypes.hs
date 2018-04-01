@@ -103,6 +103,10 @@ foreign import ccall unsafe "PolygoniseTri" c_PolygoniseTri
   -> CInt -> CInt -> CInt -> CInt
   -> IO CInt
 
+foreign import ccall unsafe "Polygonise" c_Polygonise
+  :: Ptr CGRIDCELL -> CDouble -> Ptr CTRIANGLE
+  -> IO CInt
+
 data GridCell = GridCell {
     _p   :: [XYZ]
   , _val :: [Double]
