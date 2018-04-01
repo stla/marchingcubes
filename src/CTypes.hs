@@ -106,7 +106,7 @@ foreign import ccall unsafe "PolygoniseTri" c_PolygoniseTri
 data GridCell = GridCell {
     _p   :: [XYZ]
   , _val :: [Double]
-}
+} deriving Show
 
 cGridCellToGridCell :: CGRIDCELL -> GridCell
 cGridCellToGridCell (CGRIDCELL cxyzs cvals) =

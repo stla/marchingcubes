@@ -36,3 +36,44 @@ polygoniseTri gridcell iso i0 i1 i2 i3 = do
 
 -- GridCell = { _p :: 8 XYZ, _val: 8 double }
 -- XYZ = (Double, Double, Double)
+
+toGridCell :: [XYZ] -> [Double] -> GridCell
+toGridCell xyzs vals = GridCell { _p = xyzs, _val = vals }
+
+polygoniseTri' :: GridCell
+               -> Double
+               -> IO [Triangle]
+polygoniseTri' gridcell iso = do
+  triangles1 <- polygoniseTri gridcell iso 0 2 3 7
+  triangles2 <- polygoniseTri gridcell iso 0 2 6 7
+  triangles3 <- polygoniseTri gridcell iso 0 4 6 7
+  triangles4 <- polygoniseTri gridcell iso 0 6 1 2
+  triangles5 <- polygoniseTri gridcell iso 0 6 1 4
+  triangles6 <- polygoniseTri gridcell iso 5 6 1 4
+  return $ triangles1 ++ triangles2 ++ triangles3 ++ triangles4 ++ triangles5 ++ triangles6
+
+atest :: IO [Triangle]
+atest = do
+    let f x = x*x
+        xyzs = [ (0, 0, 0)
+               , (1, 0, 0)
+               , (1, 1, 0)
+               , (0, 1, 0)
+               , (0, 0, 1)
+               , (1, 0, 1)
+               , (1, 1, 1)
+               , (0, 1, 1) ]
+        vals = map f [1, 2, 3, 4, 5, 6, 7, 8]
+        gridcell = toGridCell xyzs vals
+    polygoniseTri' gridcell 4
+
+cube1 :: [XYZ]
+cube1 = [(toDbl i, toDbl j, toDbl k) | i <- [0,1], j <- [0,1], k <- [0,1]]
+    where
+        toDbl :: Int -> Double
+        toDbl = realToFrac
+
+shift_x,shift_y,shift_z :: Double -> XYZ -> XYZ
+shift_x s (x,y,z) = (x+s,y,z)
+shift_y s (x,y,z) = (x,y+s,z)
+shift_z s (x,y,z) = (x,y,z+s)
