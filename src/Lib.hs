@@ -89,14 +89,20 @@ shift_z s (x,y,z) = (x,y,z+s) -}
 fsphere :: XYZ -> Double
 fsphere (x,y,z) = x*x + y*y + z*z
 
-range_x,range_y,range_z :: [Double]
+fGoursat :: XYZ -> Double
+fGoursat (x,y,z) = x**4 + y**4 + z**4 - 0.27*(x**2+y**2+z**2)**2 - 0.5*(x**2+y**2+z**2)
+
+fHeart :: XYZ -> Double
+fHeart (x,y,z) = (2*x**2+y**2+z**2-1)**3-x**2*z**3/10-y**2*z**3
+
+{- range_x,range_y,range_z :: [Double]
 range_x = [2 * frac i n - 1| i <- [0 .. n]]
   where
     n = 4
     frac :: Int -> Int -> Double
     frac p q = realToFrac p / realToFrac q
 range_y = range_x
-range_z = range_x
+range_z = range_x -}
 
 -- voxelGrid :: [(Int, XYZ)]
 -- voxelGrid = indexed [(x,y,z) | x <- range_x, y <- range_y, z <- range_z]
@@ -111,20 +117,35 @@ range_z = range_x
 baseGrid :: [[XYZ]]
 baseGrid = map cube [(i, j, k) | i <- [0 .. n], j <- [0 .. n], k <- [0 .. n]]
   where
-    n = 4
+    n = 9
 
-scaleCube :: [XYZ] -> [XYZ]
-scaleCube xyzs = map scale xyzs
+scaleCube :: Double -> Double -> [XYZ] -> [XYZ]
+scaleCube a b = map scale
   where
   scale (x, y, z) = (s x, s y, s z)
     where
-    s u = 2*u/5-1
+    s u = (b-a)*u/10 + a
 
-voxelGrid :: [[XYZ]]
-voxelGrid = map scaleCube baseGrid
+voxelGrid :: Double -> Double -> [[XYZ]]
+voxelGrid a b = map (scaleCube a b) baseGrid
 
-gridcells :: [GridCell]
-gridcells = map (\vcube -> toGridCell vcube (map fsphere vcube)) voxelGrid
+gridcells_sphere :: [GridCell]
+gridcells_sphere = map (\vcube -> toGridCell vcube (map fsphere vcube))
+                       (voxelGrid (-1) 1)
 
 triangles_sphere :: IO [Triangle]
-triangles_sphere = concatMapM (polygoniseTri' 1) gridcells
+triangles_sphere = concatMapM (polygoniseTri' 1) gridcells_sphere
+
+gridcells_Goursat :: [GridCell]
+gridcells_Goursat = map (\vcube -> toGridCell vcube (map fGoursat vcube))
+                        (voxelGrid (-2) 2)
+
+triangles_Goursat :: IO [Triangle]
+triangles_Goursat = concatMapM (polygoniseTri' 2) gridcells_Goursat
+
+gridcells_Heart :: [GridCell]
+gridcells_Heart = map (\vcube -> toGridCell vcube (map fHeart vcube))
+                        (voxelGrid (-4) 4)
+
+triangles_Heart :: IO [Triangle]
+triangles_Heart = concatMapM (polygoniseTri' 0) gridcells_Heart
